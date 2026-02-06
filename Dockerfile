@@ -10,6 +10,9 @@ RUN apt-get update \
        ninja-build \
        perl \
        pkg-config \
+       clang \
+       libclang-dev \
+       llvm-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Build dependency layer first for better cache hit rate.
