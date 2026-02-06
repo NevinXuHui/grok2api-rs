@@ -104,6 +104,7 @@ nsfw_max_tokens = 1000
 enable_chat_completions = true
 enable_responses = true
 enable_images = true
+enable_images_nsfw = true
 enable_models = true
 enable_files = true
 ```
@@ -202,6 +203,19 @@ curl http://127.0.0.1:8000/v1/responses \
 Responses 调用生图截图：  
 ![Responses 生图截图](docs/images/4image.png)
 
+NSFW 专用图片生成（会先尝试为该 Token 开启 NSFW）：
+
+```bash
+curl http://127.0.0.1:8000/v1/images/generations/nsfw \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "grok-imagine-1.0",
+    "prompt": "绘制一张夜店风格的人像海报",
+    "n": 1
+  }'
+```
+
 获取可用模型：
 
 ```bash
@@ -223,6 +237,7 @@ sub2api 调用模型截图：
 ## 4. 与原项目相比新增的内容
 
 - 新增 `/v1/responses`（OpenAI Responses API 兼容）。
+- 新增 `/v1/images/generations/nsfw`（NSFW 专用图片生成接口）。
 - 新增“下游管理”页面，支持下游接口开关。  
   ![下游管理截图](docs/images/2image.png)
 - 静态资源内置，支持单文件二进制部署。

@@ -6,7 +6,9 @@ use tokio::process::Command;
 
 use crate::core::config::get_config;
 use crate::core::exceptions::ApiError;
-use crate::services::grok::grpc_web::{encode_grpc_web_payload, get_grpc_status, parse_grpc_web_response};
+use crate::services::grok::grpc_web::{
+    encode_grpc_web_payload, get_grpc_status, parse_grpc_web_response,
+};
 
 const NSFW_API: &str = "https://grok.com/auth_mgmt.AuthManagement/UpdateUserFeatureControls";
 
@@ -40,12 +42,17 @@ impl NsfwService {
     async fn build_headers(&self, token: &str) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("accept", "*/*".parse().unwrap());
-        headers.insert("content-type", "application/grpc-web+proto".parse().unwrap());
+        headers.insert(
+            "content-type",
+            "application/grpc-web+proto".parse().unwrap(),
+        );
         headers.insert("origin", "https://grok.com".parse().unwrap());
         headers.insert("referer", "https://grok.com/".parse().unwrap());
         headers.insert(
             "user-agent",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36".parse().unwrap(),
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                .parse()
+                .unwrap(),
         );
         headers.insert("x-grpc-web", "1".parse().unwrap());
         headers.insert("x-user-agent", "connect-es/2.1.1".parse().unwrap());
@@ -89,7 +96,8 @@ impl NsfwService {
         let timeout: u64 = get_config("grok.timeout", 30u64).await;
         let proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let curl_path: String = get_config("grok.curl_path", "curl-impersonate".to_string()).await;
-        let impersonate: String = get_config("grok.curl_impersonate", "chrome136".to_string()).await;
+        let impersonate: String =
+            get_config("grok.curl_impersonate", "chrome136".to_string()).await;
 
         let resolved_path = if curl_path.trim().is_empty() {
             "curl-impersonate".to_string()
@@ -124,7 +132,9 @@ impl NsfwService {
             cmd.arg("-H").arg(format!("{}: {}", name.as_str(), val));
         }
 
-        cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
         let mut child = cmd
             .spawn()
             .map_err(|e| ApiError::upstream(format!("NSFW curl error: {e}")))?;
@@ -175,7 +185,11 @@ impl NsfwService {
             success,
             http_status: status,
             grpc_status: Some(grpc.code),
-            grpc_message: if grpc.message.is_empty() { None } else { Some(grpc.message) },
+            grpc_message: if grpc.message.is_empty() {
+                None
+            } else {
+                Some(grpc.message)
+            },
             error: None,
         })
     }

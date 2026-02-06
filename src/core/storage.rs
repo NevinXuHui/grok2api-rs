@@ -39,7 +39,9 @@ pub struct LocalStorage {
 
 impl LocalStorage {
     pub fn new() -> Self {
-        Self { lock: Mutex::new(()) }
+        Self {
+            lock: Mutex::new(()),
+        }
     }
 
     fn config_path() -> PathBuf {
@@ -162,14 +164,18 @@ impl Storage for LocalStorage {
     }
 }
 
-static STORAGE: once_cell::sync::OnceCell<std::sync::Arc<LocalStorage>> = once_cell::sync::OnceCell::new();
+static STORAGE: once_cell::sync::OnceCell<std::sync::Arc<LocalStorage>> =
+    once_cell::sync::OnceCell::new();
 
 pub fn get_storage() -> std::sync::Arc<LocalStorage> {
     STORAGE
         .get_or_init(|| {
-            let storage_type = std::env::var("SERVER_STORAGE_TYPE").unwrap_or_else(|_| "local".to_string());
+            let storage_type =
+                std::env::var("SERVER_STORAGE_TYPE").unwrap_or_else(|_| "local".to_string());
             if storage_type.to_lowercase() != "local" {
-                tracing::warn!("Only local storage is supported in Rust version. Requested: {storage_type}");
+                tracing::warn!(
+                    "Only local storage is supported in Rust version. Requested: {storage_type}"
+                );
             }
             std::sync::Arc::new(LocalStorage::new())
         })

@@ -80,6 +80,7 @@ const LOCALE_MAP = {
     "enable_chat_completions": { title: "Chat Completions", desc: "是否启用 /v1/chat/completions（OpenAI Chat Completions 兼容接口）。" },
     "enable_responses": { title: "Responses API", desc: "是否启用 /v1/responses（OpenAI Responses API 兼容接口）。" },
     "enable_images": { title: "Images Generations", desc: "是否启用 /v1/images/generations（图片生成）。" },
+    "enable_images_nsfw": { title: "Images NSFW", desc: "是否启用 /v1/images/generations/nsfw（NSFW 专用图片生成，会先尝试开启 NSFW）。" },
     "enable_models": { title: "Models", desc: "是否启用 /v1/models（模型列表）。" },
     "enable_files": { title: "Files", desc: "是否启用 /v1/files/image/* 和 /v1/files/video/*（缓存文件访问）。" }
   }

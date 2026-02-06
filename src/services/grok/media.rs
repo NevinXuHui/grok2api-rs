@@ -20,7 +20,8 @@ use crate::services::token::TokenService;
 const CREATE_POST_API: &str = "https://grok.com/rest/media/post/create";
 const CHAT_API: &str = "https://grok.com/rest/app-chat/conversations/new";
 
-static MEDIA_SEM: once_cell::sync::Lazy<Arc<Semaphore>> = once_cell::sync::Lazy::new(|| Arc::new(Semaphore::new(50)));
+static MEDIA_SEM: once_cell::sync::Lazy<Arc<Semaphore>> =
+    once_cell::sync::Lazy::new(|| Arc::new(Semaphore::new(50)));
 
 pub type LineStream = Pin<Box<dyn Stream<Item = String> + Send>>;
 
@@ -34,7 +35,10 @@ impl VideoService {
     async fn build_headers(&self, token: &str, referer: &str) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "*/*".parse().unwrap());
-        headers.insert("Accept-Encoding", "gzip, deflate, br, zstd".parse().unwrap());
+        headers.insert(
+            "Accept-Encoding",
+            "gzip, deflate, br, zstd".parse().unwrap(),
+        );
         headers.insert("Accept-Language", "zh-CN,zh;q=0.9".parse().unwrap());
         headers.insert("Baggage", "sentry-environment=production,sentry-release=d6add6fb0460641fd482d767a335ef72b9b6abb8,sentry-public_key=b311e0f2690c81f25e2c4cf6d4f7ce1c".parse().unwrap());
         headers.insert("Cache-Control", "no-cache".parse().unwrap());
@@ -43,7 +47,12 @@ impl VideoService {
         headers.insert("Pragma", "no-cache".parse().unwrap());
         headers.insert("Priority", "u=1, i".parse().unwrap());
         headers.insert("Referer", referer.parse().unwrap());
-        headers.insert("Sec-Ch-Ua", "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\"".parse().unwrap());
+        headers.insert(
+            "Sec-Ch-Ua",
+            "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\""
+                .parse()
+                .unwrap(),
+        );
         headers.insert("Sec-Ch-Ua-Arch", "arm".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Bitness", "64".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Mobile", "?0".parse().unwrap());
@@ -55,7 +64,10 @@ impl VideoService {
         headers.insert("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36".parse().unwrap());
         let statsig = StatsigService::gen_id().await;
         headers.insert("x-statsig-id", statsig.parse().unwrap());
-        headers.insert("x-xai-request-id", uuid::Uuid::new_v4().to_string().parse().unwrap());
+        headers.insert(
+            "x-xai-request-id",
+            uuid::Uuid::new_v4().to_string().parse().unwrap(),
+        );
         let raw = token.strip_prefix("sso=").unwrap_or(token);
         let cf: String = get_config("grok.cf_clearance", String::new()).await;
         let cookie = if cf.is_empty() {
@@ -70,15 +82,30 @@ impl VideoService {
     async fn create_post(&self, token: &str, prompt: &str) -> Result<String, ApiError> {
         let headers = self.build_headers(token, "https://grok.com/imagine").await;
         let payload = serde_json::json!({"mediaType": "MEDIA_POST_TYPE_VIDEO", "prompt": prompt});
-        let value = self.curl_json(CREATE_POST_API, headers, &payload, 30).await?;
-        Ok(value.get("post").and_then(|v| v.get("id")).and_then(|v| v.as_str()).unwrap_or("").to_string())
+        let value = self
+            .curl_json(CREATE_POST_API, headers, &payload, 30)
+            .await?;
+        Ok(value
+            .get("post")
+            .and_then(|v| v.get("id"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string())
     }
 
     async fn create_image_post(&self, token: &str, image_url: &str) -> Result<String, ApiError> {
         let headers = self.build_headers(token, "https://grok.com/imagine").await;
-        let payload = serde_json::json!({"mediaType": "MEDIA_POST_TYPE_IMAGE", "mediaUrl": image_url});
-        let value = self.curl_json(CREATE_POST_API, headers, &payload, 30).await?;
-        Ok(value.get("post").and_then(|v| v.get("id")).and_then(|v| v.as_str()).unwrap_or("").to_string())
+        let payload =
+            serde_json::json!({"mediaType": "MEDIA_POST_TYPE_IMAGE", "mediaUrl": image_url});
+        let value = self
+            .curl_json(CREATE_POST_API, headers, &payload, 30)
+            .await?;
+        Ok(value
+            .get("post")
+            .and_then(|v| v.get("id"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string())
     }
 
     async fn build_payload(
@@ -127,7 +154,16 @@ impl VideoService {
         let _permit = MEDIA_SEM.clone().acquire_owned().await.unwrap();
         let post_id = self.create_post(token, prompt).await?;
         let headers = self.build_headers(token, "https://grok.com/imagine").await;
-        let payload = self.build_payload(prompt, &post_id, aspect_ratio, video_length, resolution, preset).await;
+        let payload = self
+            .build_payload(
+                prompt,
+                &post_id,
+                aspect_ratio,
+                video_length,
+                resolution,
+                preset,
+            )
+            .await;
         let timeout: u64 = get_config("grok.timeout", 300u64).await;
         self.curl_stream(CHAT_API, headers, &payload, timeout).await
     }
@@ -145,7 +181,16 @@ impl VideoService {
         let _permit = MEDIA_SEM.clone().acquire_owned().await.unwrap();
         let post_id = self.create_image_post(token, image_url).await?;
         let headers = self.build_headers(token, "https://grok.com/imagine").await;
-        let payload = self.build_payload(prompt, &post_id, aspect_ratio, video_length, resolution, preset).await;
+        let payload = self
+            .build_payload(
+                prompt,
+                &post_id,
+                aspect_ratio,
+                video_length,
+                resolution,
+                preset,
+            )
+            .await;
         let timeout: u64 = get_config("grok.timeout", 300u64).await;
         self.curl_stream(CHAT_API, headers, &payload, timeout).await
     }
@@ -159,12 +204,19 @@ impl VideoService {
     ) -> Result<JsonValue, ApiError> {
         let use_curl: bool = get_config("grok.use_curl_impersonate", true).await;
         if !use_curl {
-            return Err(ApiError::upstream("curl-impersonate is required for Grok requests".to_string()));
+            return Err(ApiError::upstream(
+                "curl-impersonate is required for Grok requests".to_string(),
+            ));
         }
         let proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let curl_path: String = get_config("grok.curl_path", "curl-impersonate".to_string()).await;
-        let impersonate: String = get_config("grok.curl_impersonate", "chrome136".to_string()).await;
-        let resolved_path = if curl_path.trim().is_empty() { "curl-impersonate".to_string() } else { curl_path };
+        let impersonate: String =
+            get_config("grok.curl_impersonate", "chrome136".to_string()).await;
+        let resolved_path = if curl_path.trim().is_empty() {
+            "curl-impersonate".to_string()
+        } else {
+            curl_path
+        };
 
         let mut cmd = Command::new(resolved_path);
         cmd.arg("-sS")
@@ -208,7 +260,9 @@ impl VideoService {
         let (body, code_str) = stdout.rsplit_once('\n').unwrap_or((stdout.as_str(), ""));
         let status: u16 = code_str.trim().parse().unwrap_or(0);
         if status != 200 {
-            return Err(ApiError::upstream(format!("Media request failed: {status}")));
+            return Err(ApiError::upstream(format!(
+                "Media request failed: {status}"
+            )));
         }
         let value: JsonValue = serde_json::from_str(body)
             .map_err(|e| ApiError::upstream(format!("Media parse error: {e}")))?;
@@ -224,12 +278,19 @@ impl VideoService {
     ) -> Result<LineStream, ApiError> {
         let use_curl: bool = get_config("grok.use_curl_impersonate", true).await;
         if !use_curl {
-            return Err(ApiError::upstream("curl-impersonate is required for Grok requests".to_string()));
+            return Err(ApiError::upstream(
+                "curl-impersonate is required for Grok requests".to_string(),
+            ));
         }
         let proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let curl_path: String = get_config("grok.curl_path", "curl-impersonate".to_string()).await;
-        let impersonate: String = get_config("grok.curl_impersonate", "chrome136".to_string()).await;
-        let resolved_path = if curl_path.trim().is_empty() { "curl-impersonate".to_string() } else { curl_path };
+        let impersonate: String =
+            get_config("grok.curl_impersonate", "chrome136".to_string()).await;
+        let resolved_path = if curl_path.trim().is_empty() {
+            "curl-impersonate".to_string()
+        } else {
+            curl_path
+        };
 
         let mut cmd = Command::new(resolved_path);
         cmd.arg("-sS")
@@ -309,7 +370,9 @@ impl VideoService {
                 }
             }
             let _ = child.wait().await;
-            return Err(ApiError::upstream(format!("Media request failed: {status_code}")));
+            return Err(ApiError::upstream(format!(
+                "Media request failed: {status_code}"
+            )));
         }
 
         tokio::spawn(async move {
@@ -344,7 +407,8 @@ impl VideoService {
             Some("disabled") => Some(false),
             _ => None,
         };
-        let _model_info = ModelService::get(model).ok_or_else(|| ApiError::invalid_request("Unknown model"))?;
+        let _model_info =
+            ModelService::get(model).ok_or_else(|| ApiError::invalid_request("Unknown model"))?;
         let (prompt, attachments) = MessageExtractor::extract(&messages, true)?;
 
         let mut image_url: Option<String> = None;
@@ -363,16 +427,47 @@ impl VideoService {
         let is_stream = stream.unwrap_or(get_config("grok.stream", true).await);
 
         let line_stream = if let Some(url) = image_url {
-            service.generate_from_image(&token, &prompt, &url, aspect_ratio, video_length, resolution, preset).await?
+            service
+                .generate_from_image(
+                    &token,
+                    &prompt,
+                    &url,
+                    aspect_ratio,
+                    video_length,
+                    resolution,
+                    preset,
+                )
+                .await?
         } else {
-            service.generate(&token, &prompt, aspect_ratio, video_length, resolution, preset).await?
+            service
+                .generate(
+                    &token,
+                    &prompt,
+                    aspect_ratio,
+                    video_length,
+                    resolution,
+                    preset,
+                )
+                .await?
         };
 
-        Ok(VideoResult::Stream { stream: line_stream, token, model: model.to_string(), think, is_stream })
+        Ok(VideoResult::Stream {
+            stream: line_stream,
+            token,
+            model: model.to_string(),
+            think,
+            is_stream,
+        })
     }
 }
 
 pub enum VideoResult {
-    Stream { stream: LineStream, token: String, model: String, think: Option<bool>, is_stream: bool },
+    Stream {
+        stream: LineStream,
+        token: String,
+        model: String,
+        think: Option<bool>,
+        is_stream: bool,
+    },
     Json(JsonValue),
 }

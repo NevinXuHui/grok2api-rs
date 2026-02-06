@@ -28,7 +28,10 @@ impl UsageService {
     async fn build_headers(&self, token: &str) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "*/*".parse().unwrap());
-        headers.insert("Accept-Encoding", "gzip, deflate, br, zstd".parse().unwrap());
+        headers.insert(
+            "Accept-Encoding",
+            "gzip, deflate, br, zstd".parse().unwrap(),
+        );
         headers.insert("Accept-Language", "zh-CN,zh;q=0.9".parse().unwrap());
         headers.insert("Baggage", "sentry-environment=production,sentry-release=d6add6fb0460641fd482d767a335ef72b9b6abb8,sentry-public_key=b311e0f2690c81f25e2c4cf6d4f7ce1c".parse().unwrap());
         headers.insert("Cache-Control", "no-cache".parse().unwrap());
@@ -37,7 +40,12 @@ impl UsageService {
         headers.insert("Pragma", "no-cache".parse().unwrap());
         headers.insert("Priority", "u=1, i".parse().unwrap());
         headers.insert("Referer", "https://grok.com/".parse().unwrap());
-        headers.insert("Sec-Ch-Ua", "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\"".parse().unwrap());
+        headers.insert(
+            "Sec-Ch-Ua",
+            "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\""
+                .parse()
+                .unwrap(),
+        );
         headers.insert("Sec-Ch-Ua-Arch", "arm".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Bitness", "64".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Mobile", "?0".parse().unwrap());
@@ -54,7 +62,10 @@ impl UsageService {
         );
         let statsig = StatsigService::gen_id().await;
         headers.insert("x-statsig-id", statsig.parse().unwrap());
-        headers.insert("x-xai-request-id", uuid::Uuid::new_v4().to_string().parse().unwrap());
+        headers.insert(
+            "x-xai-request-id",
+            uuid::Uuid::new_v4().to_string().parse().unwrap(),
+        );
         let raw = token.strip_prefix("sso=").unwrap_or(token);
         let cf: String = get_config("grok.cf_clearance", String::new()).await;
         let cookie = if cf.is_empty() {
@@ -74,7 +85,8 @@ impl UsageService {
         });
         let timeout: u64 = get_config("grok.timeout", 10u64).await;
         let curl_path: String = get_config("grok.curl_path", "curl-impersonate".to_string()).await;
-        let impersonate: String = get_config("grok.curl_impersonate", "chrome136".to_string()).await;
+        let impersonate: String =
+            get_config("grok.curl_impersonate", "chrome136".to_string()).await;
 
         let resolved_path = if curl_path.trim().is_empty() {
             "curl-impersonate".to_string()
@@ -122,7 +134,9 @@ impl UsageService {
         let (body, code_str) = stdout.rsplit_once('\n').unwrap_or((stdout.as_str(), ""));
         let status: u16 = code_str.trim().parse().unwrap_or(0);
         if status != 200 {
-            return Err(ApiError::upstream(format!("Failed to get usage stats: {status}")));
+            return Err(ApiError::upstream(format!(
+                "Failed to get usage stats: {status}"
+            )));
         }
         let value: JsonValue = serde_json::from_str(body)
             .map_err(|e| ApiError::upstream(format!("Usage parse error: {e}")))?;
@@ -132,7 +146,9 @@ impl UsageService {
     pub async fn get(&self, token: &str, model_name: &str) -> Result<JsonValue, ApiError> {
         let use_curl: bool = get_config("grok.use_curl_impersonate", true).await;
         if !use_curl {
-            return Err(ApiError::upstream("curl-impersonate is required for Grok requests".to_string()));
+            return Err(ApiError::upstream(
+                "curl-impersonate is required for Grok requests".to_string(),
+            ));
         }
         self.get_via_curl(token, model_name).await
     }

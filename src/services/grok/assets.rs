@@ -4,9 +4,9 @@ use std::time::{Duration, Instant};
 
 use base64::Engine;
 use fs2::FileExt;
-use sha1::Digest;
 use reqwest::Client;
 use serde_json::Value as JsonValue;
+use sha1::Digest;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::sync::Mutex;
@@ -69,7 +69,9 @@ async fn curl_request(
 ) -> Result<(u16, Vec<(String, String)>, Vec<u8>), ApiError> {
     let use_curl: bool = get_config("grok.use_curl_impersonate", true).await;
     if !use_curl {
-        return Err(ApiError::upstream("curl-impersonate is required for Grok requests".to_string()));
+        return Err(ApiError::upstream(
+            "curl-impersonate is required for Grok requests".to_string(),
+        ));
     }
     let curl_path: String = get_config("grok.curl_path", "curl-impersonate".to_string()).await;
     let impersonate: String = get_config("grok.curl_impersonate", "chrome136".to_string()).await;
@@ -167,7 +169,9 @@ fn header_value(headers: &[(String, String)], name: &str) -> Option<String> {
 }
 
 fn lock_dir() -> PathBuf {
-    crate::core::config::project_root().join("data").join(".locks")
+    crate::core::config::project_root()
+        .join("data")
+        .join(".locks")
 }
 
 async fn acquire_file_lock(name: &str, timeout: u64) -> Result<std::fs::File, ApiError> {
@@ -233,7 +237,10 @@ impl BaseService {
     pub async fn headers(&self, token: &str, referer: &str) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Accept", "*/*".parse().unwrap());
-        headers.insert("Accept-Encoding", "gzip, deflate, br, zstd".parse().unwrap());
+        headers.insert(
+            "Accept-Encoding",
+            "gzip, deflate, br, zstd".parse().unwrap(),
+        );
         headers.insert("Accept-Language", "zh-CN,zh;q=0.9".parse().unwrap());
         headers.insert("Baggage", "sentry-environment=production,sentry-release=d6add6fb0460641fd482d767a335ef72b9b6abb8,sentry-public_key=b311e0f2690c81f25e2c4cf6d4f7ce1c".parse().unwrap());
         headers.insert("Cache-Control", "no-cache".parse().unwrap());
@@ -242,7 +249,12 @@ impl BaseService {
         headers.insert("Pragma", "no-cache".parse().unwrap());
         headers.insert("Priority", "u=1, i".parse().unwrap());
         headers.insert("Referer", referer.parse().unwrap());
-        headers.insert("Sec-Ch-Ua", "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\"".parse().unwrap());
+        headers.insert(
+            "Sec-Ch-Ua",
+            "\"Google Chrome\";v=\"136\", \"Chromium\";v=\"136\", \"Not(A:Brand\";v=\"24\""
+                .parse()
+                .unwrap(),
+        );
         headers.insert("Sec-Ch-Ua-Arch", "arm".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Bitness", "64".parse().unwrap());
         headers.insert("Sec-Ch-Ua-Mobile", "?0".parse().unwrap());
@@ -259,7 +271,10 @@ impl BaseService {
         );
         let statsig = StatsigService::gen_id().await;
         headers.insert("x-statsig-id", statsig.parse().unwrap());
-        headers.insert("x-xai-request-id", Uuid::new_v4().to_string().parse().unwrap());
+        headers.insert(
+            "x-xai-request-id",
+            Uuid::new_v4().to_string().parse().unwrap(),
+        );
         let raw = token.strip_prefix("sso=").unwrap_or(token);
         let cf: String = get_config("grok.cf_clearance", String::new()).await;
         let cookie = if cf.is_empty() {
@@ -273,7 +288,12 @@ impl BaseService {
 
     pub async fn dl_headers(&self, token: &str, file_path: &str) -> reqwest::header::HeaderMap {
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8".parse().unwrap());
+        headers.insert(
+            "Accept",
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                .parse()
+                .unwrap(),
+        );
         headers.insert("Sec-Fetch-Dest", "document".parse().unwrap());
         headers.insert("Sec-Fetch-Mode", "navigate".parse().unwrap());
         headers.insert("Sec-Fetch-Site", "same-site".parse().unwrap());
@@ -314,10 +334,16 @@ impl BaseService {
             .await
             .map_err(|e| ApiError::upstream(format!("Fetch failed: {e}")))?;
         if !resp.status().is_success() {
-            return Err(ApiError::upstream(format!("Fetch failed: {}", resp.status().as_u16())));
+            return Err(ApiError::upstream(format!(
+                "Fetch failed: {}",
+                resp.status().as_u16()
+            )));
         }
         let headers = resp.headers().clone();
-        let bytes = resp.bytes().await.map_err(|e| ApiError::upstream(format!("Fetch read failed: {e}")))?;
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|e| ApiError::upstream(format!("Fetch read failed: {e}")))?;
         let mime = headers
             .get("content-type")
             .and_then(|v| v.to_str().ok())
@@ -333,7 +359,8 @@ impl BaseService {
     }
 
     pub fn to_b64(&self, path: &Path, mime: &str) -> Result<String, ApiError> {
-        let bytes = std::fs::read(path).map_err(|e| ApiError::server(format!("read file failed: {e}")))?;
+        let bytes =
+            std::fs::read(path).map_err(|e| ApiError::server(format!("read file failed: {e}")))?;
         let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
         Ok(format!("data:{mime};base64,{b64}"))
     }
@@ -349,10 +376,16 @@ impl UploadService {
         let proxy: String = get_config("grok.asset_proxy_url", String::new()).await;
         let base_proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let proxy = if proxy.is_empty() { base_proxy } else { proxy };
-        Self { base: BaseService::new(Some(proxy)).await }
+        Self {
+            base: BaseService::new(Some(proxy)).await,
+        }
     }
 
-    pub async fn upload(&self, file_input: &str, token: &str) -> Result<(String, String), ApiError> {
+    pub async fn upload(
+        &self,
+        file_input: &str,
+        token: &str,
+    ) -> Result<(String, String), ApiError> {
         let (filename, b64, mime) = if BaseService::is_url(file_input) {
             self.base.fetch_url(file_input).await?
         } else {
@@ -380,8 +413,16 @@ impl UploadService {
         if status == 200 {
             let value: JsonValue = serde_json::from_slice(&resp_body)
                 .map_err(|e| ApiError::upstream(format!("Upload parse error: {e}")))?;
-            let file_id = value.get("fileMetadataId").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let file_uri = value.get("fileUri").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let file_id = value
+                .get("fileMetadataId")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let file_uri = value
+                .get("fileUri")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             return Ok((file_id, file_uri));
         }
         Err(ApiError::upstream(format!("Upload failed: {status}")))
@@ -398,7 +439,9 @@ impl ListService {
         let proxy: String = get_config("grok.asset_proxy_url", String::new()).await;
         let base_proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let proxy = if proxy.is_empty() { base_proxy } else { proxy };
-        Self { base: BaseService::new(Some(proxy)).await }
+        Self {
+            base: BaseService::new(Some(proxy)).await,
+        }
     }
 
     pub async fn list(&self, token: &str) -> Result<Vec<JsonValue>, ApiError> {
@@ -421,7 +464,8 @@ impl ListService {
             }
 
             let headers = self.base.headers(token, "https://grok.com/files").await;
-            let mut url = Url::parse(LIST_API).map_err(|e| ApiError::upstream(format!("List url error: {e}")))?;
+            let mut url = Url::parse(LIST_API)
+                .map_err(|e| ApiError::upstream(format!("List url error: {e}")))?;
             {
                 let mut pairs = url.query_pairs_mut();
                 for (k, v) in params.iter() {
@@ -444,9 +488,16 @@ impl ListService {
             }
             let value: JsonValue = serde_json::from_slice(&resp_body)
                 .map_err(|e| ApiError::upstream(format!("List parse error: {e}")))?;
-            let page_assets = value.get("assets").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let page_assets = value
+                .get("assets")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
             assets.extend(page_assets);
-            page_token = value.get("nextPageToken").and_then(|v| v.as_str()).map(|s| s.to_string());
+            page_token = value
+                .get("nextPageToken")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             if page_token.is_none() {
                 break;
             }
@@ -470,7 +521,9 @@ impl DeleteService {
         let proxy: String = get_config("grok.asset_proxy_url", String::new()).await;
         let base_proxy: String = get_config("grok.base_proxy_url", String::new()).await;
         let proxy = if proxy.is_empty() { base_proxy } else { proxy };
-        Self { base: BaseService::new(Some(proxy)).await }
+        Self {
+            base: BaseService::new(Some(proxy)).await,
+        }
     }
 
     pub async fn delete(&self, token: &str, asset_id: &str) -> Result<bool, ApiError> {
@@ -544,12 +597,21 @@ impl DownloadService {
     }
 
     fn cache_path(&self, file_path: &str, media_type: &str) -> PathBuf {
-        let dir = if media_type == "image" { &self.image_dir } else { &self.video_dir };
+        let dir = if media_type == "image" {
+            &self.image_dir
+        } else {
+            &self.video_dir
+        };
         let filename = file_path.trim_start_matches('/').replace('/', "-");
         dir.join(filename)
     }
 
-    pub async fn download(&self, file_path: &str, token: &str, media_type: &str) -> Result<(PathBuf, String), ApiError> {
+    pub async fn download(
+        &self,
+        file_path: &str,
+        token: &str,
+        media_type: &str,
+    ) -> Result<(PathBuf, String), ApiError> {
         let cache_path = self.cache_path(file_path, media_type);
         if cache_path.exists() {
             let mime = mime_guess::from_path(&cache_path).first_or_octet_stream();
@@ -586,7 +648,13 @@ impl DownloadService {
         let mime = header_value(&resp_headers, "content-type")
             .and_then(|v| v.split(';').next().map(|s| s.to_string()))
             .unwrap_or_else(|| DEFAULT_MIME.to_string());
-        let tmp_path = cache_path.with_extension(format!("{}tmp", cache_path.extension().and_then(|s| s.to_str()).unwrap_or("")));
+        let tmp_path = cache_path.with_extension(format!(
+            "{}tmp",
+            cache_path
+                .extension()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+        ));
         tokio::fs::write(&tmp_path, &resp_body)
             .await
             .map_err(|e| ApiError::server(format!("Write tmp file failed: {e}")))?;
@@ -597,7 +665,12 @@ impl DownloadService {
         Ok((cache_path, mime))
     }
 
-    pub async fn to_base64(&self, file_path: &str, token: &str, media_type: &str) -> Result<String, ApiError> {
+    pub async fn to_base64(
+        &self,
+        file_path: &str,
+        token: &str,
+        media_type: &str,
+    ) -> Result<String, ApiError> {
         let (path, mime) = self.download(file_path, token, media_type).await?;
         let data = self.base.to_b64(&path, &mime)?;
         let _ = tokio::fs::remove_file(path).await;
@@ -605,7 +678,11 @@ impl DownloadService {
     }
 
     pub fn get_stats(&self, media_type: &str) -> JsonValue {
-        let dir = if media_type == "image" { &self.image_dir } else { &self.video_dir };
+        let dir = if media_type == "image" {
+            &self.image_dir
+        } else {
+            &self.video_dir
+        };
         if !dir.exists() {
             return serde_json::json!({"count":0,"size_mb":0.0});
         }
@@ -626,7 +703,11 @@ impl DownloadService {
     }
 
     pub fn list_files(&self, media_type: &str, page: usize, page_size: usize) -> JsonValue {
-        let dir = if media_type == "image" { &self.image_dir } else { &self.video_dir };
+        let dir = if media_type == "image" {
+            &self.image_dir
+        } else {
+            &self.video_dir
+        };
         if !dir.exists() {
             return serde_json::json!({"total":0,"page":page,"page_size":page_size,"items":[]});
         }
@@ -651,7 +732,11 @@ impl DownloadService {
                 }
             }
         }
-        items.sort_by(|a, b| b.get("mtime_ms").and_then(|v| v.as_i64()).cmp(&a.get("mtime_ms").and_then(|v| v.as_i64())));
+        items.sort_by(|a, b| {
+            b.get("mtime_ms")
+                .and_then(|v| v.as_i64())
+                .cmp(&a.get("mtime_ms").and_then(|v| v.as_i64()))
+        });
         let total = items.len();
         let start = page.saturating_sub(1) * page_size;
         let end = (start + page_size).min(total);
@@ -659,7 +744,11 @@ impl DownloadService {
 
         if media_type == "image" {
             for item in paged.iter_mut() {
-                if let Some(name) = item.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()) {
+                if let Some(name) = item
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                {
                     item["view_url"] = JsonValue::String(format!("/v1/files/image/{name}"));
                 }
             }
@@ -680,11 +769,16 @@ impl DownloadService {
                 }
             }
             for item in paged.iter_mut() {
-                if let Some(name) = item.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()) {
+                if let Some(name) = item
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                {
                     item["view_url"] = JsonValue::String(format!("/v1/files/video/{name}"));
                     if let Some(stem) = Path::new(&name).file_stem().and_then(|s| s.to_str()) {
                         if let Some(preview) = preview_map.get(stem) {
-                            item["preview_url"] = JsonValue::String(format!("/v1/files/image/{preview}"));
+                            item["preview_url"] =
+                                JsonValue::String(format!("/v1/files/image/{preview}"));
                         }
                     }
                 }
@@ -695,7 +789,11 @@ impl DownloadService {
     }
 
     pub fn delete_file(&self, media_type: &str, name: &str) -> JsonValue {
-        let dir = if media_type == "image" { &self.image_dir } else { &self.video_dir };
+        let dir = if media_type == "image" {
+            &self.image_dir
+        } else {
+            &self.video_dir
+        };
         let safe = name.replace('/', "-");
         let path = dir.join(safe);
         if !path.exists() {
@@ -709,7 +807,11 @@ impl DownloadService {
     }
 
     pub fn clear(&self, media_type: &str) -> JsonValue {
-        let dir = if media_type == "image" { &self.image_dir } else { &self.video_dir };
+        let dir = if media_type == "image" {
+            &self.image_dir
+        } else {
+            &self.video_dir
+        };
         if !dir.exists() {
             return serde_json::json!({"count":0,"size_mb":0.0});
         }
@@ -745,7 +847,12 @@ impl DownloadService {
                 for entry in entries.flatten() {
                     if let Ok(meta) = entry.metadata() {
                         if meta.is_file() {
-                            let mtime = meta.modified().ok().and_then(|m| m.elapsed().ok()).map(|e| e.as_secs_f64()).unwrap_or(0.0);
+                            let mtime = meta
+                                .modified()
+                                .ok()
+                                .and_then(|m| m.elapsed().ok())
+                                .map(|e| e.as_secs_f64())
+                                .unwrap_or(0.0);
                             total_size += meta.len();
                             files.push((entry.path(), mtime, meta.len()));
                         }
@@ -772,10 +879,18 @@ impl DownloadService {
     pub async fn get_public_url(&self, file_path: &str) -> String {
         let app_url: String = get_config("app.app_url", String::new()).await;
         if app_url.is_empty() {
-            let path = if file_path.starts_with('/') { file_path.to_string() } else { format!("/{file_path}") };
+            let path = if file_path.starts_with('/') {
+                file_path.to_string()
+            } else {
+                format!("/{file_path}")
+            };
             return format!("{DOWNLOAD_API}{path}");
         }
-        let path = if file_path.starts_with('/') { file_path.to_string() } else { format!("/{file_path}") };
+        let path = if file_path.starts_with('/') {
+            file_path.to_string()
+        } else {
+            format!("/{file_path}")
+        };
         format!("{}/v1/files{}", app_url.trim_end_matches('/'), path)
     }
 }
